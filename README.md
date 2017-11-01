@@ -3,21 +3,20 @@
 The purpose of this project is to reliably transfer a file over UDP by implementing sliding window protocol and accounting for data loss, duplication, reordering, and corruption.
 
 # Packet Structure
-Each packet always consists of 1024 bytes with the structure shown below:
-Type    ID    # Packets   Data    Size    Unused    Data    Parity
- 0      4         8        12      16       20      1020    1024
+Each packet always consists of 1024 bytes with the structure shown below:<br>
 
-Type - 4 byte character array indicating the kind of packet
-   FILE - packet used to send the name of the file to transfer
-   DATA - packet used to transfer the file data from the server to client
-   ACK - packet used to acknowledge that another packet was received
-   DONE - packet used to indicate the file transfer is complete
-ID - Integer between 0 and 9 based on where the sliding window is
-Packets - Integer indicating the total number of packets needed to transfer all the data in the file window is
-Data Size - Integer indicating the number of bytes used in the data section of the packet
-Unused - 4 bytes of unused space reserved for if additional information needs to be added to the header
-Data - 1000 byte character array reserved for storing the data to send
-Parity - Integer that contains the parity of the first 1020 bytes, used for error checking
+Type - (starting at bit 0) 4 byte character array indicating the kind of packet<br>
+  * FILE - packet used to send the name of the file to transfer<br>
+  * DATA - packet used to transfer the file data from the server to client<br>
+  * ACK - packet used to acknowledge that another packet was received<br>
+  * DONE - packet used to indicate the file transfer is complete<br>
+
+ID - (starting at bit 4) 4 byte integer between 0 and 9 based on where the sliding window is<br>
+Packets - (starting at bit 8) 4 byte integer indicating the total number of packets needed to transfer all the data in the file window is<br>
+Data Size - (starting at bit 12) 4 byte integer nteger indicating the number of bytes used in the data section of the packet<br>
+Unused - (starting at bit 16) 4 bytes of unused space reserved for if additional information needs to be added to the header<br>
+Data - (starting at bit 20) 1000 byte character array reserved for storing the data to send<br>
+Parity - (starting at bit 1020) 4 byte integer that contains the parity of the first 1020 bytes, used for error checking<br>
 
 # Implementing a Sliding Window
 To begin, the server receives a FILE packet from a client containing the name of a file and then sends an ACK packet back to the client. If the server cannot open the file, it sends a DONE command to the client. If the server can open the file, it begins reading in the file and sending DATA packets to the client. Since the size of the sliding window is five packets, each packet is assigned an ID number between 0 and 9. The first five data packets are sent by the server. Each time the client receives a DATA packet, it sets a flag and sends an ACK packet back to the server indicating the packet ID of the packet received. When the server receives an ACK packet from the client, it will then set a flag indicating that that packet has been acknowledged. For the client, once the first packet of the sliding window has been received, it will write the data to a new file and slide the window. For the server, once the first packet of the sliding window has been acknowledged, the window will slide by one and the next packet will be sent. Once all the packets have been sent, the server will not send any new packets and will wait until all packets sent have been acknowledged by the client. Once all have been acknowledged, the server will send a DONE packet to the client indicating that the file transfer has been complete.
